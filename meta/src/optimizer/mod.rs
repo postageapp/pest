@@ -48,6 +48,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
 fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     fn to_optimized(expr: Expr) -> OptimizedExpr {
         match expr {
+            Expr::Fn => OptimizedExpr::Fn,
             Expr::Str(string) => OptimizedExpr::Str(string),
             Expr::Insens(string) => OptimizedExpr::Insens(string),
             Expr::Range(start, end) => OptimizedExpr::Range(start, end),
@@ -96,6 +97,7 @@ pub struct OptimizedRule {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {
+    Fn,
     Str(String),
     Insens(String),
     Range(String, String),

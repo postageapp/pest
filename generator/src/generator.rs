@@ -339,6 +339,9 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
 
 fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
+        OptimizedExpr::Fn => quote! {
+            // Skip generation of code.
+        },
         OptimizedExpr::Str(string) => {
             quote! {
                 state.match_string(#string)
@@ -485,6 +488,11 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
 
 fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
+        OptimizedExpr::Fn => {
+            quote! {
+                // No generated code.
+            }
+        }
         OptimizedExpr::Str(string) => {
             quote! {
                 state.match_string(#string)

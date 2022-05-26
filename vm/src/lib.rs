@@ -147,6 +147,7 @@ impl Vm {
         state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
+            OptimizedExpr::Fn => Ok(state),
             OptimizedExpr::Str(ref string) => state.match_string(string),
             OptimizedExpr::Insens(ref string) => state.match_insensitive(string),
             OptimizedExpr::Range(ref start, ref end) => {

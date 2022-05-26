@@ -25,6 +25,8 @@ pub enum RuleType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
+    /// Represents a manually defined function
+    Fn,
     /// Matches an exact string, e.g. `"a"`
     Str(String),
     /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
