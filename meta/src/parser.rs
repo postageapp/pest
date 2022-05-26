@@ -111,7 +111,7 @@ impl<'i> ParserNode<'i> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParserExpr<'i> {
-    FnElem,
+    Fn,
     Str(String),
     Insens(String),
     Range(String, String),
@@ -139,7 +139,7 @@ fn convert_rule(rule: ParserRule) -> AstRule {
 
 fn convert_node(node: ParserNode) -> Expr {
     match node.expr {
-        ParserExpr::FnElem => Expr::Ident("fn".into()),
+        ParserExpr::Fn => Expr::Ident("fn".into()),
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
