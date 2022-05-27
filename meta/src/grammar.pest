@@ -10,8 +10,11 @@
 grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
 grammar_rule = {
-    identifier ~ assignment_operator ~ modifier? ~
-    ((opening_brace ~ expression ~ closing_brace) | fn_elem)
+    identifier ~ assignment_operator ~
+    (
+        (modifier? ~ opening_brace ~ expression ~ closing_brace) |
+        fn_elem
+    )
 }
 
 assignment_operator = { "=" }

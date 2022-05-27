@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::char;
+use std::collections::HashSet;
 use std::iter::Peekable;
 
 use pest::error::{Error, ErrorVariant};
@@ -131,48 +132,59 @@ pub enum ParserExpr<'i> {
     Push(Box<ParserNode<'i>>),
 }
 
-fn convert_rule(rule: ParserRule) -> AstRule {
+fn convert_rule(rule: ParserRule, fn_rules: &HashSet<String>) -> AstRule {
     let ParserRule { name, ty, node, .. } = rule;
-    let expr = convert_node(node);
+    let expr = convert_node(node, fn_rules);
     AstRule { name, ty, expr }
 }
 
-fn convert_node(node: ParserNode) -> Expr {
+fn convert_node(node: ParserNode, fn_rules: &HashSet<String>) -> Expr {
     match node.expr {
         ParserExpr::Fn => Expr::Fn,
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
-        ParserExpr::Ident(ident) => Expr::Ident(ident),
+        ParserExpr::Ident(ident) => if fn_rules.contains(&ident) {
+            Expr::FnCall(ident)
+        } else {
+            Expr::Ident(ident)
+        },
         ParserExpr::PeekSlice(start, end) => Expr::PeekSlice(start, end),
-        ParserExpr::PosPred(node) => Expr::PosPred(Box::new(convert_node(*node))),
-        ParserExpr::NegPred(node) => Expr::NegPred(Box::new(convert_node(*node))),
+        ParserExpr::PosPred(node) => Expr::PosPred(Box::new(convert_node(*node, fn_rules))),
+        ParserExpr::NegPred(node) => Expr::NegPred(Box::new(convert_node(*node, fn_rules))),
         ParserExpr::Seq(node1, node2) => Expr::Seq(
-            Box::new(convert_node(*node1)),
-            Box::new(convert_node(*node2)),
+            Box::new(convert_node(*node1, fn_rules)),
+            Box::new(convert_node(*node2, fn_rules)),
         ),
         ParserExpr::Choice(node1, node2) => Expr::Choice(
-            Box::new(convert_node(*node1)),
-            Box::new(convert_node(*node2)),
+            Box::new(convert_node(*node1, fn_rules)),
+            Box::new(convert_node(*node2, fn_rules)),
         ),
-        ParserExpr::Opt(node) => Expr::Opt(Box::new(convert_node(*node))),
-        ParserExpr::Rep(node) => Expr::Rep(Box::new(convert_node(*node))),
-        ParserExpr::RepOnce(node) => Expr::RepOnce(Box::new(convert_node(*node))),
-        ParserExpr::RepExact(node, num) => Expr::RepExact(Box::new(convert_node(*node)), num),
-        ParserExpr::RepMin(node, max) => Expr::RepMin(Box::new(convert_node(*node)), max),
-        ParserExpr::RepMax(node, max) => Expr::RepMax(Box::new(convert_node(*node)), max),
+        ParserExpr::Opt(node) => Expr::Opt(Box::new(convert_node(*node, fn_rules))),
+        ParserExpr::Rep(node) => Expr::Rep(Box::new(convert_node(*node, fn_rules))),
+        ParserExpr::RepOnce(node) => Expr::RepOnce(Box::new(convert_node(*node, fn_rules))),
+        ParserExpr::RepExact(node, num) => Expr::RepExact(Box::new(convert_node(*node, fn_rules)), num),
+        ParserExpr::RepMin(node, max) => Expr::RepMin(Box::new(convert_node(*node, fn_rules)), max),
+        ParserExpr::RepMax(node, max) => Expr::RepMax(Box::new(convert_node(*node, fn_rules)), max),
         ParserExpr::RepMinMax(node, min, max) => {
-            Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
+            Expr::RepMinMax(Box::new(convert_node(*node, fn_rules)), min, max)
         }
-        ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node, fn_rules))),
     }
 }
 
 pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
     let rules = consume_rules_with_spans(pairs)?;
+    let fn_rules = rules.iter().filter_map(|r| {
+        match r.ty {
+            RuleType::Fn => Some(r.name.clone()),
+            _ => None
+        }
+    }).collect::<std::collections::HashSet<String>>();
+
     let errors = validator::validate_ast(&rules);
     if errors.is_empty() {
-        Ok(rules.into_iter().map(convert_rule).collect())
+        Ok(rules.into_iter().map(|rule| convert_rule(rule, &fn_rules)).collect())
     } else {
         Err(errors)
     }
@@ -195,15 +207,14 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
             pairs.next().unwrap(); // assignment_operator
 
             let ty = match pairs.peek().unwrap().as_rule() {
+                Rule::fn_elem => RuleType::Fn,
                 Rule::opening_brace => RuleType::Normal,
-                Rule::fn_elem => RuleType::Normal,
                 _ => {
                     match pairs.next().unwrap().as_rule() {
                         Rule::silent_modifier => RuleType::Silent,
                         Rule::atomic_modifier => RuleType::Atomic,
                         Rule::compound_atomic_modifier => RuleType::CompoundAtomic,
                         Rule::non_atomic_modifier => RuleType::NonAtomic,
-                        Rule::fn_elem => RuleType::Normal,
                         _ => unreachable!(),
                     }
                 }
@@ -1269,7 +1280,8 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let fn_ident = HashSet::new();
+        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule, &fn_ident)).collect();
 
         assert_eq!(
             ast,
@@ -1307,7 +1319,8 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let fn_ident = HashSet::new();
+        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule, &fn_ident)).collect();
 
         assert_eq!(
             ast,

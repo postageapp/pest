@@ -26,9 +26,11 @@ pub mod with_fn {
     pub struct FnParser;
 
     use pest::ParserState;
+    use pest::ParseResult;
 
     impl FnParser {
         pub fn b(state : Box <ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            // state.match_string("!")
             state.rule(
                 Rule::b,
                 |s| { s.match_string("!") }

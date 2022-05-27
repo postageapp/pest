@@ -49,6 +49,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     fn to_optimized(expr: Expr) -> OptimizedExpr {
         match expr {
             Expr::Fn => OptimizedExpr::Fn,
+            Expr::FnCall(ident) => OptimizedExpr::FnCall(ident),
             Expr::Str(string) => OptimizedExpr::Str(string),
             Expr::Insens(string) => OptimizedExpr::Insens(string),
             Expr::Range(start, end) => OptimizedExpr::Range(start, end),
@@ -95,18 +96,10 @@ pub struct OptimizedRule {
     pub expr: OptimizedExpr,
 }
 
-impl OptimizedRule {
-    pub fn generated(&self) -> bool {
-        match self {
-            Self { name: _, ty: _, expr: OptimizedExpr::Fn } => false,
-            _ => true
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {
     Fn,
+    FnCall(String),
     Str(String),
     Insens(String),
     Range(String, String),

@@ -24,8 +24,6 @@ pub fn generate(
     defaults: Vec<&str>,
     include_grammar: bool,
 ) -> TokenStream {
-    println!("!!! -> {}", name);
-
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
@@ -41,7 +39,7 @@ pub fn generate(
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
-    let mut rules: Vec<_> = rules.into_iter().filter(|rule| rule.generated()).map(generate_rule).collect();
+    let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
     rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
         if defaults.contains(&builtin) {
             Some(tokens)
@@ -73,6 +71,7 @@ pub fn generate(
 
                     pub mod visible {
                         use super::super::Rule;
+                        use super::super::#name as Parent;
                         #( #rules )*
                     }
 
@@ -94,8 +93,9 @@ pub fn generate(
         #parser_impl
     };
 
-    println!("----------------------------------------------------");
-    println!("{}", r.to_string());
+    // DEBUGGING
+    // println!("----------------------------------------------------");
+    // println!("{}", r.to_string());
 
     r
 }
@@ -247,6 +247,13 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let box_ty = box_type();
 
     match rule.ty {
+        RuleType::Fn => quote! {
+            #[inline]
+            #[allow(non_snake_case, unused_variables)]
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+                Parent::#name(state)
+            }
+        },
         RuleType::Normal => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
@@ -346,8 +353,13 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
 
 fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
-        OptimizedExpr::Fn => quote! {
+        OptimizedExpr::Fn => {
             // Skip generation of code.
+            quote! { }
+        },
+        OptimizedExpr::FnCall(ident) => {
+            let ident = Ident::new(&ident, Span::call_site());
+            quote! { Parent::#ident(state) }
         },
         OptimizedExpr::Str(string) => {
             quote! {
@@ -496,9 +508,12 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
 fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Fn => {
-            quote! {
-                // No generated code.
-            }
+            // Skip generation of code.
+            quote! { }
+        },
+        OptimizedExpr::FnCall(ident) => {
+            let ident = Ident::new(&ident, Span::call_site());
+            quote! { Parent::#ident(state) }
         }
         OptimizedExpr::Str(string) => {
             quote! {
