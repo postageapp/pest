@@ -61,6 +61,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         Err(error) => panic!(
             "error parsing \n{}",
             error.renamed_rules(|rule| match *rule {
+                Rule::fn_elem => "fn".to_owned(),
                 Rule::grammar_rule => "rule".to_owned(),
                 Rule::_push => "PUSH".to_owned(),
                 Rule::assignment_operator => "`=`".to_owned(),

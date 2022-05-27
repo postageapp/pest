@@ -95,6 +95,15 @@ pub struct OptimizedRule {
     pub expr: OptimizedExpr,
 }
 
+impl OptimizedRule {
+    pub fn generated(&self) -> bool {
+        match self {
+            Self { name: _, ty: _, expr: OptimizedExpr::Fn } => false,
+            _ => true
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {
     Fn,

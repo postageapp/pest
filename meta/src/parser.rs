@@ -139,7 +139,7 @@ fn convert_rule(rule: ParserRule) -> AstRule {
 
 fn convert_node(node: ParserNode) -> Expr {
     match node.expr {
-        ParserExpr::Fn => Expr::Ident("fn".into()),
+        ParserExpr::Fn => Expr::Fn,
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
@@ -194,28 +194,50 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
             pairs.next().unwrap(); // assignment_operator
 
-            let ty = if pairs.peek().unwrap().as_rule() != Rule::opening_brace {
-                match pairs.next().unwrap().as_rule() {
-                    Rule::silent_modifier => RuleType::Silent,
-                    Rule::atomic_modifier => RuleType::Atomic,
-                    Rule::compound_atomic_modifier => RuleType::CompoundAtomic,
-                    Rule::non_atomic_modifier => RuleType::NonAtomic,
-                    _ => unreachable!(),
+            let ty = match pairs.peek().unwrap().as_rule() {
+                Rule::opening_brace => RuleType::Normal,
+                Rule::fn_elem => RuleType::Normal,
+                _ => {
+                    match pairs.next().unwrap().as_rule() {
+                        Rule::silent_modifier => RuleType::Silent,
+                        Rule::atomic_modifier => RuleType::Atomic,
+                        Rule::compound_atomic_modifier => RuleType::CompoundAtomic,
+                        Rule::non_atomic_modifier => RuleType::NonAtomic,
+                        Rule::fn_elem => RuleType::Normal,
+                        _ => unreachable!(),
+                    }
                 }
-            } else {
-                RuleType::Normal
             };
 
-            pairs.next().unwrap(); // opening_brace
+            let node = pairs.next().unwrap();
 
-            let node = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber)?;
+            match node.as_rule() {
+                Rule::fn_elem => {
+                    Ok(ParserRule {
+                        name,
+                        span,
+                        ty,
+                        node: ParserNode {
+                            expr: ParserExpr::Fn,
+                            span: node.as_span().start_pos().span(&node.as_span().end_pos()),
+                        }
+                    })
+                },
+                Rule::opening_brace => {
+                    let node = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber)?;
 
-            Ok(ParserRule {
-                name,
-                span,
-                ty,
-                node,
-            })
+                    Ok(ParserRule {
+                        name,
+                        span,
+                        ty,
+                        node,
+                    })
+                },
+                _ => {
+                    // Not allowed by grammar
+                    unreachable!()
+                }
+            }
         })
         .collect()
 }

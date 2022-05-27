@@ -24,6 +24,8 @@ pub fn generate(
     defaults: Vec<&str>,
     include_grammar: bool,
 ) -> TokenStream {
+    println!("!!! -> {}", name);
+
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
@@ -39,7 +41,7 @@ pub fn generate(
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
-    let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
+    let mut rules: Vec<_> = rules.into_iter().filter(|rule| rule.generated()).map(generate_rule).collect();
     rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
         if defaults.contains(&builtin) {
             Some(tokens)
@@ -86,11 +88,16 @@ pub fn generate(
         }
     };
 
-    quote! {
+    let r = quote! {
         #include_fix
         #rule_enum
         #parser_impl
-    }
+    };
+
+    println!("----------------------------------------------------");
+    println!("{}", r.to_string());
+
+    r
 }
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.

@@ -19,16 +19,34 @@ extern crate pest_derive;
 
 pub use pest::Parser;
 
-pub mod json {
-    /// JSON parser.
+pub mod with_fn {
+    /// Demonstrates = fn notation
     #[derive(Parser)]
-    #[grammar = "grammars/json.pest"]
-    pub struct JsonParser;
+    #[grammar = "grammars/with_fn.pest"]
+    pub struct FnParser;
+
+    use pest::ParserState;
+
+    impl FnParser {
+        pub fn b(state : Box <ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(
+                Rule::b,
+                |s| { s.match_string("!") }
+            )
+        }
+    }
 }
 
-pub mod toml {
-    /// TOML parser.
-    #[derive(Parser)]
-    #[grammar = "grammars/toml.pest"]
-    pub struct TomlParser;
-}
+// pub mod json {
+//     /// JSON parser.
+//     #[derive(Parser)]
+//     #[grammar = "grammars/json.pest"]
+//     pub struct JsonParser;
+// }
+
+// pub mod toml {
+//     /// TOML parser.
+//     #[derive(Parser)]
+//     #[grammar = "grammars/toml.pest"]
+//     pub struct TomlParser;
+// }
