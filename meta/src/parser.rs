@@ -1113,7 +1113,7 @@ mod tests {
             parser: PestParser,
             input: "a = _",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::fn_elem, Rule::opening_brace],
+            positives: vec![Rule::opening_brace],
             negatives: vec![],
             pos: 5
         };

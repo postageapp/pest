@@ -1027,6 +1027,7 @@ mod tests {
 
                             pub mod visible {
                                 use super::super::Rule;
+                                use super::super::MyParser as Parent;
 
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]

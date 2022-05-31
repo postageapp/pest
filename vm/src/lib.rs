@@ -89,7 +89,7 @@ impl Vm {
         if let Some(rule) = self.rules.get(rule) {
             if &rule.name == "WHITESPACE" || &rule.name == "COMMENT" {
                 match rule.ty {
-                    RuleType::Normal => state.rule(&rule.name, |state| {
+                    RuleType::Normal | RuleType::Fn => state.rule(&rule.name, |state| {
                         state.atomic(Atomicity::Atomic, |state| {
                             self.parse_expr(&rule.expr, state)
                         })
@@ -107,11 +107,11 @@ impl Vm {
                     }),
                     RuleType::NonAtomic => state.atomic(Atomicity::Atomic, |state| {
                         state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
-                    }),
+                    })
                 }
             } else {
                 match rule.ty {
-                    RuleType::Normal => {
+                    RuleType::Normal | RuleType::Fn => {
                         state.rule(&rule.name, move |state| self.parse_expr(&rule.expr, state))
                     }
                     RuleType::Silent => self.parse_expr(&rule.expr, state),
@@ -127,7 +127,7 @@ impl Vm {
                     }
                     RuleType::NonAtomic => state.atomic(Atomicity::NonAtomic, move |state| {
                         state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
-                    }),
+                    })
                 }
             }
         } else {
@@ -148,6 +148,7 @@ impl Vm {
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
             OptimizedExpr::Fn => Ok(state),
+            OptimizedExpr::FnCall(ref _string) => Ok(state),
             OptimizedExpr::Str(ref string) => state.match_string(string),
             OptimizedExpr::Insens(ref string) => state.match_insensitive(string),
             OptimizedExpr::Range(ref start, ref end) => {
