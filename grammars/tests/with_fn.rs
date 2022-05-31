@@ -29,3 +29,17 @@ fn custom_fn_direct() {
         ]
     };
 }
+
+#[test]
+fn custom_fn_indirect_with_alias() {
+    parses_to! {
+        parser: FnParser,
+        input: "[D]",
+        rule: Rule::c,
+        tokens: [
+            c(0, 3, [
+                d(1,2)
+            ])
+        ]
+    };
+}

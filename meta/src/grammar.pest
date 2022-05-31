@@ -13,7 +13,7 @@ grammar_rule = {
     identifier ~ assignment_operator ~
     (
         (modifier? ~ opening_brace ~ expression ~ closing_brace) |
-        fn_elem
+        fn_elem ~ (opening_paren ~ fn_alias ~ closing_paren)?
     )
 }
 
@@ -77,6 +77,7 @@ _push = { "PUSH" ~ opening_paren ~ expression ~ closing_paren }
 peek_slice = { "PEEK" ~ opening_brack ~ integer? ~ range_operator ~ integer? ~ closing_brack }
 
 identifier = @{ !"PUSH" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
+fn_alias   = @{ ("_" | alpha) ~ ("_" | alpha_num)* }
 alpha      = _{ 'a'..'z' | 'A'..'Z' }
 alpha_num  = _{ alpha | '0'..'9' }
 

@@ -87,17 +87,11 @@ pub fn generate(
         }
     };
 
-    let r = quote! {
+    quote! {
         #include_fix
         #rule_enum
         #parser_impl
-    };
-
-    // DEBUGGING
-    // println!("----------------------------------------------------");
-    // println!("{}", r.to_string());
-
-    r
+    }
 }
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
@@ -247,11 +241,13 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let box_ty = box_type();
 
     match rule.ty {
-        RuleType::Fn => quote! {
-            #[inline]
-            #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
-                Parent::#name(state)
+        RuleType::Fn => {
+            quote! {
+                #[inline]
+                #[allow(non_snake_case, unused_variables)]
+                pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+                    #expr
+                }
             }
         },
         RuleType::Normal => quote! {
@@ -353,10 +349,6 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
 
 fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
-        OptimizedExpr::Fn => {
-            // Skip generation of code.
-            quote! { }
-        },
         OptimizedExpr::FnCall(ident) => {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { Parent::#ident(state) }
@@ -507,10 +499,6 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
 
 fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
-        OptimizedExpr::Fn => {
-            // Skip generation of code.
-            quote! { }
-        },
         OptimizedExpr::FnCall(ident) => {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { Parent::#ident(state) }

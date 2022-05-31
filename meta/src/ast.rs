@@ -26,9 +26,7 @@ pub enum RuleType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
-    /// Represents a manually defined function
-    Fn,
-    /// Represents a call to a manually defined function
+    /// Represents a call to a user defined function
     FnCall(String),
     /// Matches an exact string, e.g. `"a"`
     Str(String),

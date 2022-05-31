@@ -36,19 +36,27 @@ pub mod with_fn {
                 |s| { s.match_string("!") }
             )
         }
+
+        pub fn d_alias(state : Box <ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            // state.match_string("!")
+            state.rule(
+                Rule::d,
+                |s| { s.match_string("D") }
+            )
+        }
     }
 }
 
-// pub mod json {
-//     /// JSON parser.
-//     #[derive(Parser)]
-//     #[grammar = "grammars/json.pest"]
-//     pub struct JsonParser;
-// }
+pub mod json {
+    /// JSON parser.
+    #[derive(Parser)]
+    #[grammar = "grammars/json.pest"]
+    pub struct JsonParser;
+}
 
-// pub mod toml {
-//     /// TOML parser.
-//     #[derive(Parser)]
-//     #[grammar = "grammars/toml.pest"]
-//     pub struct TomlParser;
-// }
+pub mod toml {
+    /// TOML parser.
+    #[derive(Parser)]
+    #[grammar = "grammars/toml.pest"]
+    pub struct TomlParser;
+}

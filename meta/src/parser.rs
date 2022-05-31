@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::char;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::iter::Peekable;
 
 use pest::error::{Error, ErrorVariant};
@@ -112,7 +112,7 @@ impl<'i> ParserNode<'i> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParserExpr<'i> {
-    Fn,
+    Fn(String),
     Str(String),
     Insens(String),
     Range(String, String),
@@ -132,20 +132,20 @@ pub enum ParserExpr<'i> {
     Push(Box<ParserNode<'i>>),
 }
 
-fn convert_rule(rule: ParserRule, fn_rules: &HashSet<String>) -> AstRule {
+fn convert_rule(rule: ParserRule, fn_rules: &HashMap<String,String>) -> AstRule {
     let ParserRule { name, ty, node, .. } = rule;
     let expr = convert_node(node, fn_rules);
     AstRule { name, ty, expr }
 }
 
-fn convert_node(node: ParserNode, fn_rules: &HashSet<String>) -> Expr {
+fn convert_node(node: ParserNode, fn_rules: &HashMap<String,String>) -> Expr {
     match node.expr {
-        ParserExpr::Fn => Expr::Fn,
+        ParserExpr::Fn(string) => Expr::FnCall(string),
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
-        ParserExpr::Ident(ident) => if fn_rules.contains(&ident) {
-            Expr::FnCall(ident)
+        ParserExpr::Ident(ident) => if let Some(fn_name) = fn_rules.get(&ident) {
+            Expr::FnCall(fn_name.to_owned())
         } else {
             Expr::Ident(ident)
         },
@@ -177,10 +177,13 @@ pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>
     let rules = consume_rules_with_spans(pairs)?;
     let fn_rules = rules.iter().filter_map(|r| {
         match r.ty {
-            RuleType::Fn => Some(r.name.clone()),
+            RuleType::Fn => match &r.node.expr {
+                ParserExpr::Fn(fn_name) => Some((r.name.to_owned(), fn_name.to_owned())),
+                _ => None
+            },
             _ => None
         }
-    }).collect::<std::collections::HashSet<String>>();
+    }).collect::<std::collections::HashMap<String,String>>();
 
     let errors = validator::validate_ast(&rules);
     if errors.is_empty() {
@@ -224,12 +227,23 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
             match node.as_rule() {
                 Rule::fn_elem => {
+                    let fn_name = match pairs.peek().map(|p| p.as_rule()) {
+                        Some(Rule::opening_paren) => {
+                            let (_, alias, _) = (pairs.next(), pairs.next(), pairs.next());
+
+                            alias.unwrap().as_str().to_owned()
+                        },
+                        _ => {
+                            name.to_owned()
+                        }
+                    };
+
                     Ok(ParserRule {
                         name,
                         span,
                         ty,
                         node: ParserNode {
-                            expr: ParserExpr::Fn,
+                            expr: ParserExpr::Fn(fn_name),
                             span: node.as_span().start_pos().span(&node.as_span().end_pos()),
                         }
                     })
@@ -1280,7 +1294,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let fn_ident = HashSet::new();
+        let fn_ident = HashMap::new();
         let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule, &fn_ident)).collect();
 
         assert_eq!(
@@ -1319,7 +1333,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let fn_ident = HashSet::new();
+        let fn_ident = HashMap::new();
         let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule, &fn_ident)).collect();
 
         assert_eq!(
