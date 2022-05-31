@@ -42,14 +42,14 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         GrammarSource::File(path) => {
             let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
             let full_path = Path::new(&root).join("src/").join(&path);
-            let file_name = match full_path.file_name() {
+            let _file_name = match full_path.file_name() {
                 Some(file_name) => file_name,
                 None => panic!("grammar attribute should point to a file"),
             };
 
             let data = match read_file(&full_path) {
                 Ok(data) => data,
-                Err(error) => panic!("error opening {:?}: {}", file_name, error),
+                Err(error) => panic!("error opening {:?}: {}", full_path, error),
             };
             (data, Some(path))
         }
