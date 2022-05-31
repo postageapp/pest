@@ -51,6 +51,12 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
                 Ok(data) => data,
                 Err(error) => panic!("error opening {:?}: {}", full_path, error),
             };
+
+            let path = match std::fs::canonicalize(&full_path) {
+                Ok(expanded) => expanded.into_os_string().into_string().unwrap_or(path),
+                Err(_) => path
+            };
+
             (data, Some(path))
         }
         GrammarSource::Inline(content) => (content, None),
